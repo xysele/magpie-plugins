@@ -740,8 +740,10 @@ test("a Chat stream Zen closes before its [DONE] ends cut short for a streaming 
 
 // Zen's free tier answers only at the inference API since mid-October 2026
 // (403 FreeTierError at /zen/v1 to OpenCode's own request); a model listed
-// before then, whose URL is /zen/v1, is asked there too.
-test("asks the inference API, also for a model listed at /zen/v1", async (t) => {
+// before then, whose URL is /zen/v1, is asked there too. Each protocol
+// goes where OpenCode 2.2.5 sends it, models.dev's v2 base_url
+// (/inference/openai/v1, /inference/anthropic/v1), not /inference/v1.
+test("asks the inference API where OpenCode 2 does, also for a model listed at /zen/v1", async (t) => {
   const { default: plugin } = await subject;
   const realFetch = globalThis.fetch;
   const asked = [];
@@ -749,8 +751,19 @@ test("asks the inference API, also for a model listed at /zen/v1", async (t) => 
     const url = String(input instanceof Request ? input.url : input);
     asked.push(url);
     if (url.endsWith("/models"))
-      return Response.json({ data: [{ id: "big-pickle" }] });
-    if (url.endsWith("/chat/completions"))
+      return Response.json({ data: [{ id: "big-pickle" }, { id: "m-free" }, { id: "r-free" }] });
+    if (url === "https://models.opencode.ai/api.json")
+      return Response.json({
+        opencode: {
+          npm: "@ai-sdk/openai-compatible",
+          models: {
+            "big-pickle": {},
+            "m-free": { provider: { npm: "@ai-sdk/anthropic" } },
+            "r-free": { provider: { npm: "@ai-sdk/openai" } },
+          },
+        },
+      });
+    if (url.endsWith("/chat/completions") || url.endsWith("/messages") || url.endsWith("/responses"))
       return new Response('data: {"choices":[{"index":0,"delta":{"content":"pong"}}]}\n\ndata: [DONE]\n\n', {
         headers: { "content-type": "text/event-stream" },
       });
@@ -772,9 +785,23 @@ test("asks the inference API, also for a model listed at /zen/v1", async (t) => 
     });
     assert.equal(response.status, 200);
     await response.text();
-    assert.equal(asked.at(-1), "https://opencode.ai/inference/v1/chat/completions");
+    assert.equal(asked.at(-1), "https://opencode.ai/inference/openai/v1/chat/completions");
+  }
+  for (const [path, model, sent] of [
+    ["messages", "m-free", "https://opencode.ai/inference/anthropic/v1/messages"],
+    ["responses", "r-free", "https://opencode.ai/inference/openai/v1/responses"],
+  ]) {
+    const response = await loader.fetch(`https://opencode.ai/inference/v1/${path}`, {
+      method: "POST",
+      body: JSON.stringify({ model, stream: true, messages: [], input: [] }),
+    });
+    await response.text();
+    assert.equal(asked.at(-1), sent);
   }
   assert.ok(!asked.some((url) => url.startsWith("https://opencode.ai/zen/")), asked.join("\n"));
+  assert.ok(!asked.some((url) => /\/inference\/v1\/(chat|messages|responses)/.test(url)), asked.join("\n"));
+  // the version is asked of OpenCode's own updater, and its 500 leaves 2.2.5
+  assert.ok(asked.includes("https://opencode.ai/update/api/latest/cli/npm?current=2.2.5"), asked.join("\n"));
 });
 
 // Zen's free tier serves a request as OpenCode's only with OpenCode's

@@ -20,6 +20,17 @@ import { guardToolResponse } from "./tool-response.mjs";
 // listed before then still names /zen/v1 (LEGACY_BASE), which is asked here.
 const DEFAULT_BASE = "https://opencode.ai/inference/v1";
 const LEGACY_BASE = "https://opencode.ai/zen/v1";
+// Where OpenCode 2 itself sends each protocol: the base_url models.dev's
+// v2 catalog (models.opencode.ai/experimental/v2.0/api.json, which 2.2.5
+// reads) gives every opencode model, free ones included, on 2026-11-01.
+// 0.1.18 and before sent all of them to /inference/v1, where no OpenCode
+// 2 request goes. The model list stays at /inference/v1/models: OpenCode
+// reads its catalog instead, and /inference/openai/v1/models is a 404.
+const OPENCODE_BASE = {
+  chat: "https://opencode.ai/inference/openai/v1",
+  responses: "https://opencode.ai/inference/openai/v1",
+  anthropic: "https://opencode.ai/inference/anthropic/v1",
+};
 const CATALOG = "https://models.opencode.ai/api.json";
 // OpenCode's table of what each model is asked at; packages/web's zen.mdx,
 // read before, was removed on 2026-10-12 (anomalyco/opencode#54761)
@@ -639,7 +650,8 @@ async function server(_input, options = {}) {
               headers.set("anthropic-version", given.get("anthropic-version") || "2023-06-01");
               if (given.get("anthropic-beta")) headers.set("anthropic-beta", given.get("anthropic-beta"));
             }
-            const response = await fetch(`${baseURL}${PATHS[protocol]}`, {
+            const upstream = baseURL === DEFAULT_BASE ? OPENCODE_BASE[protocol] : baseURL;
+            const response = await fetch(`${upstream}${PATHS[protocol]}`, {
               method: "POST",
               headers,
               body: JSON.stringify(body),

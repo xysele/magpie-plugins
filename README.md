@@ -22,7 +22,9 @@ User-Agent (`opencode/latest/2.2.5/cli`, the version kept current from
 OpenCode's own updater), its `b3` and `traceparent` trace headers, and
 its project id, `sha1("directory:" + folder)` or the repository's remote,
 where 0.1.14 to 0.1.18 sent `global`. The model list goes as OpenCode
-too, not as Bun.
+too, not as Bun. From 0.1.20 each protocol goes where OpenCode 2 sends
+it, the base URL models.dev's v2 catalog gives (`/inference/openai/v1`,
+`/inference/anthropic/v1`), not `/inference/v1`.
 
 ## Install
 
