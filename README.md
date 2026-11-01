@@ -16,6 +16,14 @@ sends OpenCode 2.0.25's headers (`opencode/latest/2.0.25/cli`, its
 session id under `x-session-affinity` and `x-session-id` too): update
 the plugin.
 
+From 0.1.19 a request is OpenCode 2.2.5's, header for header and in its
+order, as captured from the release binary on 2026-11-01: its
+User-Agent (`opencode/latest/2.2.5/cli`, the version kept current from
+OpenCode's own updater), its `b3` and `traceparent` trace headers, and
+its project id, `sha1("directory:" + folder)` or the repository's remote,
+where 0.1.14 to 0.1.18 sent `global`. The model list goes as OpenCode
+too, not as Bun.
+
 ## Install
 
 ```sh
@@ -76,8 +84,8 @@ reply's text says so; a turn whose every call was left out ends as an
 ordinary answer. Tools run in the agent.
 
 Zen's free tier only answers a request that carries tools, so a request
-is sent with the five core OpenCode tools the agent doesn't declare
-itself (`bash`, `edit`, `glob`, `grep`, `read`), described as not
+is sent with the five core OpenCode 2 tools the agent doesn't declare
+itself (`edit`, `glob`, `grep`, `read`, `shell`), described as not
 available. A call of one of them the agent doesn't have reaches the agent
 like any other.
 
